@@ -32,49 +32,30 @@
 
 
 /**
-
 @mainpage slam_gmapping
-
 @htmlinclude manifest.html
-
 @b slam_gmapping is a wrapper around the GMapping SLAM library. It reads laser
 scans and odometry and computes a map. This map can be
 written to a file using e.g.
-
   "rosrun map_server map_saver static_map:=dynamic_map"
-
 <hr>
-
 @section topic ROS topics
-
 Subscribes to (name/type):
 - @b "scan"/<a href="../../sensor_msgs/html/classstd__msgs_1_1LaserScan.html">sensor_msgs/LaserScan</a> : data from a laser range scanner 
 - @b "/tf": odometry from the robot
-
-
 Publishes to (name/type):
 - @b "/tf"/tf/tfMessage: position relative to the map
-
-
 @section services
  - @b "~dynamic_map" : returns the map
-
-
 @section parameters ROS parameters
-
 Reads the following parameters from the parameter server
-
 Parameters used by our GMapping wrapper:
-
 - @b "~throttle_scans": @b [int] throw away every nth laser scan
 - @b "~base_frame": @b [string] the tf frame_id to use for the robot base pose
 - @b "~map_frame": @b [string] the tf frame_id where the robot pose on the map is published
 - @b "~odom_frame": @b [string] the tf frame_id from which odometry is read
 - @b "~map_update_interval": @b [double] time in seconds between two recalculations of the map
-
-
 Parameters used by GMapping itself:
-
 Laser Parameters:
 - @b "~/maxRange" @b [double] maximum range of the laser scans. Rays beyond this range get discarded completely. (default: maximum laser range minus 1 cm, as received in the the first LaserScan message)
 - @b "~/maxUrange" @b [double] maximum range of the laser scanner that is used for map building (default: same as maxRange)
@@ -87,33 +68,27 @@ Laser Parameters:
 - @b "~/ogain" @b [double] gain for smoothing the likelihood
 - @b "~/lskip" @b [int] take only every (n+1)th laser ray for computing a match (0 = take all rays)
 - @b "~/minimumScore" @b [double] minimum score for considering the outcome of the scanmatching good. Can avoid 'jumping' pose estimates in large open spaces when using laser scanners with limited range (e.g. 5m). (0 = default. Scores go up to 600+, try 50 for example when experiencing 'jumping' estimate issues)
-
 Motion Model Parameters (all standard deviations of a gaussian noise model)
 - @b "~/srr" @b [double] linear noise component (x and y)
 - @b "~/stt" @b [double] angular noise component (theta)
 - @b "~/srt" @b [double] linear -> angular noise component
 - @b "~/str" @b [double] angular -> linear noise component
-
 Others:
 - @b "~/linearUpdate" @b [double] the robot only processes new measurements if the robot has moved at least this many meters
 - @b "~/angularUpdate" @b [double] the robot only processes new measurements if the robot has turned at least this many rads
-
 - @b "~/resampleThreshold" @b [double] threshold at which the particles get resampled. Higher means more frequent resampling.
 - @b "~/particles" @b [int] (fixed) number of particles. Each particle represents a possible trajectory that the robot has traveled
-
 Likelihood sampling (used in scan matching)
 - @b "~/llsamplerange" @b [double] linear range
 - @b "~/lasamplerange" @b [double] linear step size
 - @b "~/llsamplestep" @b [double] linear range
 - @b "~/lasamplestep" @b [double] angular step size
-
 Initial map dimensions and resolution:
 - @b "~/xmin" @b [double] minimum x position in the map [m]
 - @b "~/ymin" @b [double] minimum y position in the map [m]
 - @b "~/xmax" @b [double] maximum x position in the map [m]
 - @b "~/ymax" @b [double] maximum y position in the map [m]
 - @b "~/delta" @b [double] size of one pixel [m]
-
 */
 
 
@@ -181,9 +156,9 @@ void SlamGMapping::init()
 
   got_first_scan_ = false;
   got_map_ = false;
-  
 
-  
+
+
   // Parameters used by our GMapping wrapper
   if(!private_nh_.getParam("throttle_scans", throttle_scans_))
     throttle_scans_ = 1;
@@ -200,7 +175,7 @@ void SlamGMapping::init()
   if(!private_nh_.getParam("map_update_interval", tmp))
     tmp = 2.0;
   map_update_interval_.fromSec(tmp);
-  
+
   // Parameters used by GMapping itself
   maxUrange_ = 2.9;  maxRange_ = 3.0; // preliminary default, will be set in initMapper()
   if(!private_nh_.getParam("minimumScore", minimum_score_))
@@ -240,13 +215,13 @@ void SlamGMapping::init()
   if(!private_nh_.getParam("particles", particles_))
     particles_ = 100;
   if(!private_nh_.getParam("xmin", xmin_))
-    xmin_ = 0.0;
+    xmin_ = -10.0;
   if(!private_nh_.getParam("ymin", ymin_))
-    ymin_ = 0.0;
+    ymin_ = -10.0;
   if(!private_nh_.getParam("xmax", xmax_))
-    xmax_ = 20.0;
+    xmax_ = 10.0;
   if(!private_nh_.getParam("ymax", ymax_))
-    ymax_ = 20.0;
+    ymax_ = 10.0;
   if(!private_nh_.getParam("delta", delta_))
     delta_ = 0.05;
   if(!private_nh_.getParam("occ_thresh", occ_thresh_))
@@ -259,7 +234,7 @@ void SlamGMapping::init()
     lasamplerange_ = 0.005;
   if(!private_nh_.getParam("lasamplestep", lasamplestep_))
     lasamplestep_ = 0.005;
-    
+
   if(!private_nh_.getParam("tf_delay", tf_delay_))
     tf_delay_ = transform_publish_period_;
 
@@ -287,10 +262,10 @@ void SlamGMapping::startReplay(const std::string & bag_fname, std::string scan_t
   sst_ = node_.advertise<nav_msgs::OccupancyGrid>("map", 1, true);
   sstm_ = node_.advertise<nav_msgs::MapMetaData>("map_metadata", 1, true);
   ss_ = node_.advertiseService("dynamic_map", &SlamGMapping::mapCallback, this);
-  
+
   rosbag::Bag bag;
   bag.open(bag_fname, rosbag::bagmode::Read);
-  
+
   std::vector<std::string> topics;
   topics.push_back(std::string("/tf"));
   topics.push_back(scan_topic);
@@ -439,7 +414,7 @@ SlamGMapping::initMapper(const sensor_msgs::LaserScan& scan)
              e.what());
     return false;
   }
-  
+
   // gmapping doesnt take roll or pitch into account. So check for correct sensor alignment.
   if (fabs(fabs(up.z()) - 1) > 0.001)
   {
@@ -486,10 +461,10 @@ SlamGMapping::initMapper(const sensor_msgs::LaserScan& scan)
 
   // setting maxRange and maxUrange here so we can set a reasonable default
   ros::NodeHandle private_nh_("~");
-  if(!private_nh_.getParam("maxRange", 3.0))
+  if(!private_nh_.getParam("maxRange", maxRange_))
     maxRange_ = scan.range_max - 0.01;
-  if(!private_nh_.getParam("maxUrange", 2.9))
-    maxUrange_ = maxRange_-0.01;
+  if(!private_nh_.getParam("maxUrange", maxUrange_))
+    maxUrange_ = maxRange_;
 
   // The laser must be called "FLASER".
   // We pass in the absolute value of the computed angle increment, on the
@@ -552,7 +527,7 @@ SlamGMapping::addScan(const sensor_msgs::LaserScan& scan, GMapping::OrientedPoin
 {
   if(!getOdomPose(gmap_pose, scan.header.stamp))
      return false;
-  
+
   if(scan.ranges.size() != gsp_laser_beam_count_)
     return false;
 
@@ -739,7 +714,7 @@ SlamGMapping::updateMap(const sensor_msgs::LaserScan& scan)
     GMapping::Point wmax = smap.map2world(GMapping::IntPoint(smap.getMapSizeX(), smap.getMapSizeY()));
     xmin_ = wmin.x; ymin_ = wmin.y;
     xmax_ = wmax.x; ymax_ = wmax.y;
-    
+
     ROS_DEBUG("map size is now %dx%d pixels (%f,%f)-(%f, %f)", smap.getMapSizeX(), smap.getMapSizeY(),
               xmin_, ymin_, xmax_, ymax_);
 
@@ -760,9 +735,8 @@ SlamGMapping::updateMap(const sensor_msgs::LaserScan& scan)
       GMapping::IntPoint p(x, y);
       double occ=smap.cell(p);
       assert(occ <= 1.0);
-      if(occ < 0.8){
-        map_.map.data[MAP_IDX(map_.map.info.width, x, y)] = 20;
-      }
+      if(occ < 0)
+        map_.map.data[MAP_IDX(map_.map.info.width, x, y)] = 50;
       else 
       {
         //map_.map.data[MAP_IDX(map_.map.info.width, x, y)] = (int)round(occ*100.0);
@@ -794,7 +768,7 @@ SlamGMapping::mapCallback(nav_msgs::GetMap::Request  &req,
     return false;
 }
 
-/*void SlamGMapping::publishTransform()
+void SlamGMapping::publishTransform()
 {
   map_to_odom_mutex_.lock();
   ros::Time tf_expiration = ros::Time::now() + ros::Duration(tf_delay_);
