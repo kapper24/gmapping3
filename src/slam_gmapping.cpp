@@ -202,7 +202,7 @@ void SlamGMapping::init()
   map_update_interval_.fromSec(tmp);
   
   // Parameters used by GMapping itself
-  maxUrange_ = 3.0;  maxRange_ = 0.0; // preliminary default, will be set in initMapper()
+  maxUrange_ = 2.9;  maxRange_ = 3.0; // preliminary default, will be set in initMapper()
   if(!private_nh_.getParam("minimumScore", minimum_score_))
     minimum_score_ = 50;
   if(!private_nh_.getParam("sigma", sigma_))
@@ -486,10 +486,10 @@ SlamGMapping::initMapper(const sensor_msgs::LaserScan& scan)
 
   // setting maxRange and maxUrange here so we can set a reasonable default
   ros::NodeHandle private_nh_("~");
-  if(!private_nh_.getParam("maxRange", maxRange_))
+  if(!private_nh_.getParam("maxRange", 3.0))
     maxRange_ = scan.range_max - 0.01;
-  if(!private_nh_.getParam("maxUrange", maxUrange_))
-    maxUrange_ = maxRange_;
+  if(!private_nh_.getParam("maxUrange", 2.9))
+    maxUrange_ = maxRange_-0.01;
 
   // The laser must be called "FLASER".
   // We pass in the absolute value of the computed angle increment, on the
@@ -760,8 +760,9 @@ SlamGMapping::updateMap(const sensor_msgs::LaserScan& scan)
       GMapping::IntPoint p(x, y);
       double occ=smap.cell(p);
       assert(occ <= 1.0);
-      if(occ < 0)
+      if(occ < 0.8){
         map_.map.data[MAP_IDX(map_.map.info.width, x, y)] = 20;
+      }
       else 
       {
         //map_.map.data[MAP_IDX(map_.map.info.width, x, y)] = (int)round(occ*100.0);
