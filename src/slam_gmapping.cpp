@@ -240,13 +240,13 @@ void SlamGMapping::init()
   if(!private_nh_.getParam("particles", particles_))
     particles_ = 100;
   if(!private_nh_.getParam("xmin", xmin_))
-    xmin_ = -10.0;
+    xmin_ = 0.0;
   if(!private_nh_.getParam("ymin", ymin_))
-    ymin_ = -10.0;
+    ymin_ = 0.0;
   if(!private_nh_.getParam("xmax", xmax_))
-    xmax_ = 10.0;
+    xmax_ = 20.0;
   if(!private_nh_.getParam("ymax", ymax_))
-    ymax_ = 10.0;
+    ymax_ = 20.0;
   if(!private_nh_.getParam("delta", delta_))
     delta_ = 0.05;
   if(!private_nh_.getParam("occ_thresh", occ_thresh_))
@@ -761,7 +761,7 @@ SlamGMapping::updateMap(const sensor_msgs::LaserScan& scan)
       double occ=smap.cell(p);
       assert(occ <= 1.0);
       if(occ < 0)
-        map_.map.data[MAP_IDX(map_.map.info.width, x, y)] = 50;
+        map_.map.data[MAP_IDX(map_.map.info.width, x, y)] = 20;
       else 
       {
         //map_.map.data[MAP_IDX(map_.map.info.width, x, y)] = (int)round(occ*100.0);
@@ -793,7 +793,7 @@ SlamGMapping::mapCallback(nav_msgs::GetMap::Request  &req,
     return false;
 }
 
-void SlamGMapping::publishTransform()
+/*void SlamGMapping::publishTransform()
 {
   map_to_odom_mutex_.lock();
   ros::Time tf_expiration = ros::Time::now() + ros::Duration(tf_delay_);
